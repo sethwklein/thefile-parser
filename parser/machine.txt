@@ -1,0 +1,83 @@
+# After changing this file, go run generator/generator.go
+
+# Template:
+# +c: ?? ()
+# +t: ?? ()
+# +o: ?? ()
+# +e: -  ()
+
+# "note = i" is what we use when we don't know if we have a new section yet
+# "foo.empty(x)" = "foo.low = x, foo.high = x"
+
+# do you know you have a(nother) section?
+# normally, not until you find the end of the next header or eof.
+# at begin, yes, as soon as you find non-clear content.
+
+# I: Initial state
+I+c: Ic ()
+I+t: Q  (new page, head.low = i)
+I+o: Bo (new page, head.empty(i), body.low = i)
+I+e: -  (terminate)
+
+# Ic: Found one clear, no actions yet
+Ic+c: Icc (note = i)
+Ic+t: Q   (new page, head.low = i)
+Ic+o: Bo  (new page, head.empty(i), body.low = i)
+Ic+e: -   (terminate)
+
+# Icc: Location of second clear noted
+Icc+c: Icc ()
+Icc+t: Q   (new page, head.low = i)
+Icc+o: Bo  (new page, head.empty(note), body.low = note)
+Icc+e: -   (terminate)
+
+# Q: Found title, created page and (tentatively) filled in head low, but
+# don't know if it's really a head yet
+Q+c: Hc (head.high = i)
+Q+t: Q  ()
+Q+o: Bo (head.high = head.low, body.low = head.low)
+Q+e: -  (head.high = i, body.empty(i), terminate)
+
+# Hc: Filled head
+Hc+c: Hcc (body.low = i)
+Hc+t: Hct (note = i)
+Hc+o: Bo  (body.low = i)
+Hc+e: -   (body.empty(head.high), terminate)
+
+# Hct: Filled head, might have empty body
+Hct+c: Hc  (body.empty(head.high), new page, head.low = note, head.high = i)
+Hct+t: Hct ()
+Hct+o: Bo  (body.low = note)
+Hct+e: -   (body.empty(head.high), new page, head.low = note, head.high = i, body.empty(i), terminate)
+
+# Hcc: Location of second clear stored in body.low, don't know if it's really
+# a body yet
+Hcc+c: Bc   ()
+Hcc+t: Hcct (note = i)
+Hcc+o: Bo   ()
+Hcc+e: -    (body.empty(head.high), terminate)
+
+# Hcct: Might have empty body, might have body starting with clear, title, ...,
+# other
+Hcct+c: Hc   (body.empty(head.high), new page, head.low = note, head.high = i)
+Hcct+t: Hcct ()
+Hcct+o: Bo   ()
+Hcct+e: -    (body.empty(head.high), new page, head.low = note, head.high = i, body.empty(i), terminate)
+
+# Bo: Body start filled, had other
+Bo+c: Bc ()
+Bo+t: Bo ()
+Bo+o: Bo ()
+Bo+e: -  (body.high = i, terminate)
+
+# Bc: Body start filled, head clear
+Bc+c: Bc  ()
+Bc+t: Bct (note = i)
+Bc+o: Bo  ()
+Bc+e: -   (body.high = i - 1, terminate)
+
+# Bct: Body start filled, noted start of what might be head
+Bct+c: Hc  (body.high = note - 1, new page, head.low = note, head.high = i)
+Bct+t: Bct ()
+Bct+o: Bo  ()
+Bct+e: -   (body.high = note - 1, new page, head.low = note, head.high = i, body.empty(i), terminate)
